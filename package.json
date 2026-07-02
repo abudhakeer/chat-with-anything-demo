@@ -11,7 +11,8 @@
     "deploy": "pnpm build && wrangler deploy --config wrangler.jsonc",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types",
-    "d1:migrate:local": "wrangler d1 migrations apply chat-with-anything --local --config wrangler.local.jsonc"
+    "d1:migrate:local": "wrangler d1 migrations apply chat-with-anything --local --config wrangler.local.jsonc",
+    "seed:samples": "node scripts/seed-samples.mjs"
   },
   "dependencies": {
     "hono": "^4.7.10",

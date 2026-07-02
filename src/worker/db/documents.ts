@@ -133,6 +133,56 @@ export async function deleteDocument(db: D1Database, id: string): Promise<void> 
   await db.prepare("DELETE FROM documents WHERE id = ?").bind(id).run();
 }
 
+export async function upsertSampleDocument(
+  db: D1Database,
+  input: {
+    id: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    r2Key: string;
+    pipeline: DocumentPipeline;
+    status: DocumentStatus;
+    expiresAt: string;
+  },
+): Promise<DocumentRecord> {
+  await db
+    .prepare(
+      `INSERT INTO documents (
+        id, file_name, mime_type, size_bytes, r2_key, pipeline,
+        ai_search_instance_id, status, error_message, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, NULL, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        file_name = excluded.file_name,
+        mime_type = excluded.mime_type,
+        size_bytes = excluded.size_bytes,
+        r2_key = excluded.r2_key,
+        pipeline = excluded.pipeline,
+        ai_search_instance_id = NULL,
+        status = excluded.status,
+        error_message = NULL,
+        updated_at = datetime('now'),
+        expires_at = excluded.expires_at`,
+    )
+    .bind(
+      input.id,
+      input.fileName,
+      input.mimeType,
+      input.sizeBytes,
+      input.r2Key,
+      input.pipeline,
+      input.status,
+      input.expiresAt,
+    )
+    .run();
+
+  const document = await getDocument(db, input.id);
+  if (!document) {
+    throw new Error(`Failed to upsert sample document ${input.id}`);
+  }
+  return document;
+}
+
 export function toDocumentResponse(doc: DocumentRecord) {
   return {
     id: doc.id,

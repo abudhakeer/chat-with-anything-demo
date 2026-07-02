@@ -1,0 +1,22 @@
+Acme Analytics — Q1 2026 Summary (Sample Document)
+
+Revenue grew 18% year-over-year to $4.2M, driven primarily by enterprise renewals
+in healthcare and logistics. Gross margin improved from 61% to 64% after migrating
+inference workloads to edge infrastructure.
+
+Key risks called out by leadership:
+1. Customer concentration — top three accounts represent 42% of ARR.
+2. Regulatory review in the EU market may delay two pending deals until Q3.
+3. Hiring lag in customer success; NPS slipped from 58 to 51.
+
+Product highlights:
+- Document chat latency dropped from 8s to under 2s median after switching to
+  managed retrieval instead of a custom embedding pipeline.
+- Vision Q&A for uploaded charts reached 89% helpfulness in pilot feedback.
+
+Action items for next quarter:
+- Launch self-serve demo with automatic 24-hour data retention.
+- Publish a public case study on the edge-native architecture migration.
+- Expand sample library with pre-indexed demo documents for portfolio visitors.
+
+Contact: demo-team@acme-analytics.example

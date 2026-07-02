@@ -4,9 +4,7 @@ import {
   updateDocumentStatus,
 } from "../db/documents";
 import { deleteAiSearchInstance } from "../lib/ai-search";
-import { SAMPLE_DOCUMENTS } from "../lib/constants";
-
-const SAMPLE_IDS = new Set(SAMPLE_DOCUMENTS.map((sample) => sample.id));
+import { SAMPLE_IDS } from "../lib/samples";
 
 export async function expireDocuments(env: Env): Promise<number> {
   const nowIso = new Date().toISOString();

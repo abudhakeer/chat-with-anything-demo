@@ -113,6 +113,26 @@ pnpm deploy
 | `pnpm d1:migrate:local` | Apply D1 migrations to local dev database |
 | `pnpm typecheck` | TypeScript check |
 | `pnpm deploy` | Build + deploy to Cloudflare |
+| `pnpm seed:samples` | Upload demo samples to R2 and register them in production |
+
+## Sample documents
+
+The landing page links to two fixed demo ids: `sample_text_demo` and `sample_image_demo`.
+Source files live in `samples/`. They are exempt from the 24h expiry cron.
+
+Seed them once in production after deploy:
+
+```bash
+# Set a secret on the Worker (one time)
+pnpm exec wrangler secret put SEED_SECRET --config wrangler.jsonc
+
+# Upload R2 files + register D1 rows + index the text sample
+export SEED_SECRET=the-same-secret
+pnpm seed:samples
+```
+
+The script uploads `samples/*` to R2, then calls `POST /api/v1/admin/seed-samples` on the
+deployed Worker. Re-run safely after sample content changes.
 
 ## Portfolio notes
 
@@ -127,4 +147,4 @@ Tracked in [GitHub Issues](https://github.com/abudhakeer/chat-with-anything-demo
 
 Issues **#5–#10** implemented in this repo: AI Search indexing, vision chat, streaming API, split-view UI, cron expiry, and KV rate limiting.
 
-Sample documents (`sample_text_demo`, `sample_image_demo`) are reserved IDs exempt from expiry — seed manually in production for “Try a sample” buttons.
+Live demo: https://chat-with-anything.abudhakeer.workers.dev

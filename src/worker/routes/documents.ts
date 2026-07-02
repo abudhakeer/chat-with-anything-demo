@@ -8,7 +8,7 @@ import {
 import type { AppEnv } from "../index";
 import { indexTextDocument, streamTextDocumentChat } from "../lib/ai-search";
 import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
-import { SAMPLE_DOCUMENTS } from "../lib/constants";
+import { SAMPLE_DOCUMENTS } from "../lib/samples";
 import {
   buildDocumentId,
   buildR2Key,
@@ -32,7 +32,9 @@ export const documentsRoutes = new Hono<AppEnv>();
 documentsRoutes.get("/samples", (c) => {
   return c.json({
     samples: SAMPLE_DOCUMENTS.map((sample) => ({
-      ...sample,
+      id: sample.id,
+      label: sample.label,
+      description: sample.description,
       chatPath: `/chat/${sample.id}`,
     })),
   });

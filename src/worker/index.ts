@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { expireDocuments } from "./jobs/expire-documents";
+import { adminRoutes } from "./routes/admin";
 import { documentsRoutes } from "./routes/documents";
 
 export type AppEnv = {
@@ -16,6 +17,7 @@ app.get("/api/v1/health", (c) => {
 });
 
 app.route("/api/v1/documents", documentsRoutes);
+app.route("/api/v1/admin", adminRoutes);
 
 export default {
   fetch: app.fetch,
