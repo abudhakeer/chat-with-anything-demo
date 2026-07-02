@@ -3,6 +3,21 @@ export const VISION_CHAT_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
 export const MAX_CHAT_HISTORY_MESSAGES = 20;
 export const RATE_LIMIT_UPLOADS_PER_HOUR = 10;
+export const INDEXING_POLL_TIMEOUT_MS = 120_000;
+export const INDEXING_POLL_INTERVAL_MS = 2_000;
+
+export const SAMPLE_DOCUMENTS = [
+  {
+    id: "sample_text_demo",
+    label: "Sample report (text)",
+    description: "Pre-indexed PDF-style demo document",
+  },
+  {
+    id: "sample_image_demo",
+    label: "Sample chart (image)",
+    description: "Vision pipeline demo image",
+  },
+] as const;
 
 export const INDEXING_POLL_TIMEOUT_MS = 120_000;
 export const INDEXING_POLL_INTERVAL_MS = 2_000;

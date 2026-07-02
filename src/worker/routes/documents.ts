@@ -8,6 +8,7 @@ import {
 import type { AppEnv } from "../index";
 import { indexTextDocument, streamTextDocumentChat } from "../lib/ai-search";
 import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
+import { SAMPLE_DOCUMENTS } from "../lib/constants";
 import {
   buildDocumentId,
   buildR2Key,
@@ -27,6 +28,15 @@ type PresignBody = {
 };
 
 export const documentsRoutes = new Hono<AppEnv>();
+
+documentsRoutes.get("/samples", (c) => {
+  return c.json({
+    samples: SAMPLE_DOCUMENTS.map((sample) => ({
+      ...sample,
+      chatPath: `/chat/${sample.id}`,
+    })),
+  });
+});
 
 documentsRoutes.post("/presign", async (c) => {
   const ip = getClientIp(c.req.raw.headers);

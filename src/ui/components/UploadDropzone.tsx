@@ -105,7 +105,9 @@ export function UploadDropzone() {
             <p className="mt-2 text-sm text-slate-400">
               PDF · TXT · MD · PNG · JPG · WEBP
             </p>
-            <p className="mt-1 text-xs text-slate-500">Max 20MB</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Max 20MB · PDF/TXT/MD indexed up to 4MB
+            </p>
           </>
         )}
       </div>
