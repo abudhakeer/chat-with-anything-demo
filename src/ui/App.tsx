@@ -1,24 +1,23 @@
 import { Link, Route, Routes } from "react-router-dom";
+import { UploadDropzone } from "./components/UploadDropzone";
 
 function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-6 px-6 text-center">
-      <p className="text-sm font-medium uppercase tracking-widest text-sky-400">
-        Built on Cloudflare
-      </p>
-      <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-        Chat with Anything
-      </h1>
-      <p className="max-w-lg text-base text-slate-400">
-        Upload a document, preview it, and chat with it. Portfolio demo scaffold
-        is running.
-      </p>
-      <Link
-        to="/chat/demo"
-        className="rounded-lg bg-sky-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-sky-400"
-      >
-        View chat shell
-      </Link>
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-8 px-6 py-16 text-center">
+      <div className="space-y-3">
+        <p className="text-sm font-medium uppercase tracking-widest text-sky-400">
+          Built on Cloudflare
+        </p>
+        <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+          Chat with Anything
+        </h1>
+        <p className="mx-auto max-w-lg text-base text-slate-400">
+          Upload a document, preview it, and chat with it. PDFs and text files are
+          indexed for retrieval; images go straight to vision chat.
+        </p>
+      </div>
+
+      <UploadDropzone />
     </main>
   );
 }
