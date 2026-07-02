@@ -80,3 +80,19 @@ if (!response.ok) {
 
 console.log("Sample seed complete:");
 console.log(JSON.stringify(payload, null, 2));
+
+const textSample = payload?.samples?.find((sample) => sample.id === "sample_text_demo");
+if (textSample?.status === "indexing") {
+  console.log("Waiting for text sample indexing to finish...");
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    const statusResponse = await fetch(
+      `${WORKER_URL}/api/v1/documents/sample_text_demo/status`,
+    );
+    const statusPayload = await statusResponse.json();
+    console.log(`  status check ${attempt + 1}:`, statusPayload.status);
+    if (statusPayload.status === "ready" || statusPayload.status === "failed") {
+      break;
+    }
+  }
+}

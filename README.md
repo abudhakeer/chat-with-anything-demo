@@ -123,8 +123,8 @@ Source files live in `samples/`. They are exempt from the 24h expiry cron.
 Seed them once in production after deploy:
 
 ```bash
-# Set a secret on the Worker (one time)
-pnpm exec wrangler secret put SEED_SECRET --config wrangler.jsonc
+# Set a secret on the Worker (one time; use printf to avoid a trailing newline)
+printf '%s' 'your-secret-here' | pnpm exec wrangler secret put SEED_SECRET --config wrangler.jsonc
 
 # Upload R2 files + register D1 rows + index the text sample
 export SEED_SECRET=the-same-secret

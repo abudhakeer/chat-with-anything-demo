@@ -53,7 +53,11 @@ export async function seedSampleDocuments(
       }
 
       if (ctx) {
-        ctx.waitUntil(indexTextDocument(env, document));
+        ctx.waitUntil(
+          indexTextDocument(env, document).catch((error) => {
+            console.error("[seed.index]", sample.id, error);
+          }),
+        );
         results.push({
           id: sample.id,
           status: "indexing",
