@@ -1,8 +1,6 @@
 import { getDocument, upsertSampleDocument } from "../db/documents";
-import { indexTextDocument, deleteAiSearchInstance, toAiSearchInstanceId } from "./ai-search";
 import {
   buildSampleR2Key,
-  initialSampleStatus,
   SAMPLE_DOCUMENTS,
   sampleExpiresAt,
 } from "./samples";
@@ -27,7 +25,6 @@ export async function seedSampleDocuments(env: Env): Promise<SeedSampleResult[]>
       );
     }
 
-    const status = initialSampleStatus(sample.pipeline);
     await upsertSampleDocument(env.DB, {
       id: sample.id,
       fileName: sample.fileName,
@@ -35,28 +32,14 @@ export async function seedSampleDocuments(env: Env): Promise<SeedSampleResult[]>
       sizeBytes: object.size,
       r2Key,
       pipeline: sample.pipeline,
-      status,
+      status: "ready",
       expiresAt: sampleExpiresAt(),
     });
-
-    if (sample.pipeline === "text") {
-      if (!env.AI_SEARCH) {
-        throw new Error("AI Search is not configured.");
-      }
-
-      const document = await getDocument(env.DB, sample.id);
-      if (!document) {
-        throw new Error(`Sample document ${sample.id} not found after upsert.`);
-      }
-
-      await deleteAiSearchInstance(env, toAiSearchInstanceId(sample.id));
-      await indexTextDocument(env, document);
-    }
 
     const finalDocument = await getDocument(env.DB, sample.id);
     results.push({
       id: sample.id,
-      status: finalDocument?.status ?? status,
+      status: finalDocument?.status ?? "ready",
       pipeline: sample.pipeline,
       error: finalDocument?.error_message ?? undefined,
     });

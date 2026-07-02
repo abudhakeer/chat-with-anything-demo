@@ -8,7 +8,8 @@ import {
 import type { AppEnv } from "../index";
 import { indexTextDocument, streamTextDocumentChat } from "../lib/ai-search";
 import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
-import { SAMPLE_DOCUMENTS } from "../lib/samples";
+import { streamSampleTextChat } from "../lib/sample-chat";
+import { SAMPLE_DOCUMENTS, SAMPLE_IDS } from "../lib/samples";
 import {
   buildDocumentId,
   buildR2Key,
@@ -193,19 +194,26 @@ documentsRoutes.post("/:id/chat", async (c) => {
     const { message, history } = parseChatRequestBody(body);
 
     const stream =
-      document.pipeline === "text"
-        ? await streamTextDocumentChat({
+      SAMPLE_IDS.has(document.id) && document.pipeline === "text"
+        ? await streamSampleTextChat({
             env: c.env,
             document,
             message,
             history,
           })
-        : await streamVisionDocumentChat({
-            env: c.env,
-            document,
-            message,
-            history,
-          });
+        : document.pipeline === "text"
+          ? await streamTextDocumentChat({
+              env: c.env,
+              document,
+              message,
+              history,
+            })
+          : await streamVisionDocumentChat({
+              env: c.env,
+              document,
+              message,
+              history,
+            });
 
     return sseResponse(stream);
   } catch (error) {
@@ -213,7 +221,10 @@ documentsRoutes.post("/:id/chat", async (c) => {
       return jsonError(error.message, 400);
     }
     console.error("[documents.chat]", error);
-    return jsonError("Failed to generate chat response.", 500);
+    return jsonError(
+      error instanceof Error ? error.message : "Failed to generate chat response.",
+      500,
+    );
   }
 });
 

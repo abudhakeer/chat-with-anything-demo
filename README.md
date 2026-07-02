@@ -119,6 +119,8 @@ pnpm deploy
 
 The landing page links to two fixed demo ids: `sample_text_demo` and `sample_image_demo`.
 Source files live in `samples/`. They are exempt from the 24h expiry cron.
+The text sample uses direct Workers AI (full document in context) so it works without
+AI Search indexing. Re-seed after changing sample files.
 
 Seed them once in production after deploy:
 

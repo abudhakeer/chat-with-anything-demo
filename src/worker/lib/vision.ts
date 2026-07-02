@@ -3,6 +3,8 @@ import { VISION_CHAT_MODEL } from "./constants";
 import type { ChatMessage } from "./chat";
 import { createSimulatedTokenStream } from "./sse";
 
+const MAX_VISION_IMAGE_BYTES = 512 * 1024;
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -23,8 +25,14 @@ export async function streamVisionDocumentChat(args: {
     throw new Error("Image file not found in storage.");
   }
 
-  const base64 = arrayBufferToBase64(await object.arrayBuffer());
-  const dataUrl = `data:${args.document.mime_type};base64,${base64}`;
+  const bytes = await object.arrayBuffer();
+  if (bytes.byteLength > MAX_VISION_IMAGE_BYTES) {
+    throw new Error(
+      "Image is too large for vision chat. Please upload an image under 512KB.",
+    );
+  }
+
+  const dataUrl = `data:${args.document.mime_type};base64,${arrayBufferToBase64(bytes)}`;
 
   const messages: Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Messages["messages"] = [
     {
@@ -39,8 +47,8 @@ export async function streamVisionDocumentChat(args: {
     {
       role: "user",
       content: [
-        { type: "image_url", image_url: { url: dataUrl } },
         { type: "text", text: args.message },
+        { type: "image_url", image_url: { url: dataUrl } },
       ],
     },
   ];

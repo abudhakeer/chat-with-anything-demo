@@ -1,4 +1,4 @@
-import type { DocumentPipeline, DocumentStatus } from "../db/types";
+import type { DocumentPipeline } from "../db/types";
 
 export type SampleDefinition = {
   id: string;
@@ -42,10 +42,6 @@ export function buildSampleR2Key(sampleId: string, fileName: string): string {
 /** Samples are exempt from the 24h retention cron; use a far-future date as backup. */
 export function sampleExpiresAt(): string {
   return "2099-01-01T00:00:00.000Z";
-}
-
-export function initialSampleStatus(pipeline: DocumentPipeline): DocumentStatus {
-  return pipeline === "vision" ? "ready" : "indexing";
 }
 
 export function getSampleDefinition(id: string): SampleDefinition | undefined {
