@@ -1,5 +1,7 @@
-import { Link, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
+import { SampleDocs } from "./components/SampleDocs";
 import { UploadDropzone } from "./components/UploadDropzone";
+import { ChatPage } from "./pages/ChatPage";
 
 function HomePage() {
   return (
@@ -18,18 +20,7 @@ function HomePage() {
       </div>
 
       <UploadDropzone />
-    </main>
-  );
-}
-
-function ChatPage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-2xl font-semibold text-white">Chat shell</h1>
-      <p className="text-slate-400">Split-view chat UI lands in Issue #9.</p>
-      <Link to="/" className="text-sm text-sky-400 hover:text-sky-300">
-        ← Back home
-      </Link>
+      <SampleDocs />
     </main>
   );
 }
