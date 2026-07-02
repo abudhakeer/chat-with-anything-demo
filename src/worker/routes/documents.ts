@@ -16,6 +16,7 @@ import {
   validateFileSize,
 } from "../lib/files";
 import { jsonError } from "../lib/http";
+import { checkUploadRateLimit, getClientIp } from "../lib/rate-limit";
 import { sseResponse } from "../lib/sse";
 import { streamVisionDocumentChat } from "../lib/vision";
 
@@ -28,6 +29,12 @@ type PresignBody = {
 export const documentsRoutes = new Hono<AppEnv>();
 
 documentsRoutes.post("/presign", async (c) => {
+  const ip = getClientIp(c.req.raw.headers);
+  const rateLimit = await checkUploadRateLimit(c.env.RATE_LIMIT, ip);
+  if (!rateLimit.allowed) {
+    return jsonError("Upload rate limit exceeded. Try again in an hour.", 429);
+  }
+
   let body: PresignBody;
   try {
     body = await c.req.json<PresignBody>();

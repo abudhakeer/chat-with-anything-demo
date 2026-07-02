@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { expireDocuments } from "./jobs/expire-documents";
 import { documentsRoutes } from "./routes/documents";
 
 export type AppEnv = {
@@ -16,4 +17,9 @@ app.get("/api/v1/health", (c) => {
 
 app.route("/api/v1/documents", documentsRoutes);
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled: async (_controller, env, ctx) => {
+    ctx.waitUntil(expireDocuments(env));
+  },
+} satisfies ExportedHandler<Env>;
