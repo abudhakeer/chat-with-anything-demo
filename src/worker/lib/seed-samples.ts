@@ -1,5 +1,5 @@
 import { getDocument, upsertSampleDocument } from "../db/documents";
-import { indexTextDocument } from "./ai-search";
+import { indexTextDocument, deleteAiSearchInstance, toAiSearchInstanceId } from "./ai-search";
 import {
   buildSampleR2Key,
   initialSampleStatus,
@@ -49,6 +49,7 @@ export async function seedSampleDocuments(env: Env): Promise<SeedSampleResult[]>
         throw new Error(`Sample document ${sample.id} not found after upsert.`);
       }
 
+      await deleteAiSearchInstance(env, toAiSearchInstanceId(sample.id));
       await indexTextDocument(env, document);
     }
 
