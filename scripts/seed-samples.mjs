@@ -61,8 +61,7 @@ for (const sample of SAMPLES) {
   ]);
 }
 
-console.log("Registering samples in D1 and indexing text sample via Worker...");
-console.log("Text sample indexing continues in the background after the API responds.");
+console.log("Registering samples in D1 and indexing the text sample via Worker...");
 
 const response = await fetch(`${WORKER_URL}/api/v1/admin/seed-samples`, {
   method: "POST",

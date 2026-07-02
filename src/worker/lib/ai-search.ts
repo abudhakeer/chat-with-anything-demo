@@ -25,7 +25,7 @@ export async function getOrCreateAiSearchInstance(
 export async function indexTextDocument(env: Env, document: DocumentRecord): Promise<void> {
   const instanceId = toAiSearchInstanceId(document.id);
 
-  try {
+  const runIndexing = async (): Promise<void> => {
     const instance = await getOrCreateAiSearchInstance(env, document.id);
     const object = await env.BUCKET.get(document.r2_key);
 
@@ -46,6 +46,17 @@ export async function indexTextDocument(env: Env, document: DocumentRecord): Pro
       aiSearchInstanceId: instanceId,
       errorMessage: null,
     });
+  };
+
+  try {
+    await Promise.race([
+      runIndexing(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Indexing timed out after 90 seconds."));
+        }, 90_000);
+      }),
+    ]);
   } catch (error) {
     console.error("[ai-search.index]", document.id, error);
     await updateDocumentStatus(env.DB, document.id, "failed", {
