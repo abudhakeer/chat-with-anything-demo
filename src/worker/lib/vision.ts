@@ -6,7 +6,20 @@ import { createSimulatedTokenStream } from "./sse";
 const MAX_VISION_IMAGE_BYTES = 512 * 1024;
 
 async function ensureVisionModelLicensed(env: Env): Promise<void> {
-  await env.AI.run(VISION_CHAT_MODEL, { prompt: "agree" });
+  try {
+    await env.AI.run(VISION_CHAT_MODEL, { prompt: "agree" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("Thank you for agreeing")) {
+      return;
+    }
+    throw error;
+  }
+}
+
+function requiresVisionLicenseAcceptance(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("agree") && !message.includes("Thank you for agreeing");
 }
 
 async function runVisionModel(
@@ -19,8 +32,7 @@ async function runVisionModel(
       max_tokens: 1024,
     })) as Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Output;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (!message.includes("agree") && !message.includes("5016")) {
+    if (!requiresVisionLicenseAcceptance(error)) {
       throw error;
     }
 
