@@ -5,6 +5,33 @@ import { createSimulatedTokenStream } from "./sse";
 
 const MAX_VISION_IMAGE_BYTES = 512 * 1024;
 
+async function ensureVisionModelLicensed(env: Env): Promise<void> {
+  await env.AI.run(VISION_CHAT_MODEL, { prompt: "agree" });
+}
+
+async function runVisionModel(
+  env: Env,
+  messages: Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Messages["messages"],
+): Promise<Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Output> {
+  try {
+    return (await env.AI.run(VISION_CHAT_MODEL, {
+      messages,
+      max_tokens: 1024,
+    })) as Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Output;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("agree") && !message.includes("5016")) {
+      throw error;
+    }
+
+    await ensureVisionModelLicensed(env);
+    return (await env.AI.run(VISION_CHAT_MODEL, {
+      messages,
+      max_tokens: 1024,
+    })) as Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Output;
+  }
+}
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -53,14 +80,8 @@ export async function streamVisionDocumentChat(args: {
     },
   ];
 
-  const result = await args.env.AI.run(VISION_CHAT_MODEL, {
-    messages,
-    max_tokens: 1024,
-  });
-
-  const text =
-    (result as Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Output).response ??
-    "Sorry, I couldn't analyze this image.";
+  const result = await runVisionModel(args.env, messages);
+  const text = result.response ?? "Sorry, I couldn't analyze this image.";
 
   return createSimulatedTokenStream(text);
 }
