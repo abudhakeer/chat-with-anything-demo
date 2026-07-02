@@ -33,7 +33,7 @@ adminRoutes.post("/seed-samples", async (c) => {
   }
 
   try {
-    const results = await seedSampleDocuments(c.env);
+    const results = await seedSampleDocuments(c.env, c.executionCtx);
     return c.json({ ok: true, samples: results });
   } catch (error) {
     console.error("[admin.seed-samples]", error);

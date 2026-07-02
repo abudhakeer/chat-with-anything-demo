@@ -14,7 +14,10 @@ export type SeedSampleResult = {
   error?: string;
 };
 
-export async function seedSampleDocuments(env: Env): Promise<SeedSampleResult[]> {
+export async function seedSampleDocuments(
+  env: Env,
+  ctx?: ExecutionContext,
+): Promise<SeedSampleResult[]> {
   const results: SeedSampleResult[] = [];
 
   for (const sample of SAMPLE_DOCUMENTS) {
@@ -47,6 +50,16 @@ export async function seedSampleDocuments(env: Env): Promise<SeedSampleResult[]>
       const document = await getDocument(env.DB, sample.id);
       if (!document) {
         throw new Error(`Sample document ${sample.id} not found after upsert.`);
+      }
+
+      if (ctx) {
+        ctx.waitUntil(indexTextDocument(env, document));
+        results.push({
+          id: sample.id,
+          status: "indexing",
+          pipeline: sample.pipeline,
+        });
+        continue;
       }
 
       await indexTextDocument(env, document);
