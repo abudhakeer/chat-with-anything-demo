@@ -1,6 +1,7 @@
 import type { DocumentPipeline } from "../db/types";
 
 export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+export const MAX_TEXT_INDEX_BYTES = 4 * 1024 * 1024;
 
 const ALLOWED_EXTENSIONS = new Set([
   "pdf",
@@ -64,13 +65,22 @@ export function parseUploadFile(fileName: string, contentType: string): ParsedUp
   };
 }
 
-export function validateFileSize(sizeBytes: number): void {
+export function validateFileSize(
+  sizeBytes: number,
+  pipeline?: DocumentPipeline,
+): void {
   if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
     throw new UploadValidationError("Invalid file size.");
   }
 
   if (sizeBytes > MAX_FILE_SIZE_BYTES) {
     throw new UploadValidationError("File exceeds the 20MB limit.");
+  }
+
+  if (pipeline === "text" && sizeBytes > MAX_TEXT_INDEX_BYTES) {
+    throw new UploadValidationError(
+      "PDF and text files must be 4MB or smaller for AI Search indexing.",
+    );
   }
 }
 

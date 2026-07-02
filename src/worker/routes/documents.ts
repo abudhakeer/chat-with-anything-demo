@@ -6,6 +6,7 @@ import {
   updateDocumentStatus,
 } from "../db/documents";
 import type { AppEnv } from "../index";
+import { indexTextDocument } from "../lib/ai-search";
 import {
   buildDocumentId,
   buildR2Key,
@@ -36,8 +37,8 @@ documentsRoutes.post("/presign", async (c) => {
   }
 
   try {
-    validateFileSize(body.size);
     const parsed = parseUploadFile(body.fileName, body.contentType);
+    validateFileSize(body.size, parsed.pipeline);
     const id = buildDocumentId();
     const r2Key = buildR2Key(id, parsed.fileName);
 
@@ -129,7 +130,16 @@ documentsRoutes.post("/:id/complete", async (c) => {
     return jsonError("Failed to update document status.", 500);
   }
 
-  return c.json(toDocumentResponse(updated));
+  if (updated.pipeline === "text" && c.env.AI_SEARCH) {
+    c.executionCtx.waitUntil(indexTextDocument(c.env, updated));
+  } else if (updated.pipeline === "text" && !c.env.AI_SEARCH) {
+    await updateDocumentStatus(c.env.DB, id, "failed", {
+      errorMessage: "AI Search is not configured in this environment.",
+    });
+  }
+
+  const latest = await getDocument(c.env.DB, id);
+  return c.json(toDocumentResponse(latest ?? updated));
 });
 
 documentsRoutes.get("/:id", async (c) => {

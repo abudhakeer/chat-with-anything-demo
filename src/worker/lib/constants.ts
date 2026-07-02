@@ -1,0 +1,2 @@
+export const INDEXING_POLL_TIMEOUT_MS = 120_000;
+export const INDEXING_POLL_INTERVAL_MS = 2_000;
