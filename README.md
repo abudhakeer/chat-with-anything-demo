@@ -14,7 +14,7 @@ See [`docs/PRD.md`](docs/PRD.md) for the full product spec.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (see `.nvmrc`)
 - [pnpm](https://pnpm.io/)
 - Cloudflare account (`npx wrangler login`)
 
@@ -22,15 +22,20 @@ See [`docs/PRD.md`](docs/PRD.md) for the full product spec.
 
 ```bash
 pnpm install
-
-# Provision Cloudflare resources (first time only)
-pnpm exec wrangler d1 create chat-with-anything
-pnpm exec wrangler kv namespace create RATE_LIMIT
-# Update database_id and kv id in wrangler.jsonc
-
-pnpm exec wrangler types
+pnpm d1:migrate:local
 pnpm build
 ```
+
+Run `pnpm d1:migrate:local` once before first local dev session. Do not add comments on the same line — zsh/pnpm can pass `# ...` text through as extra arguments.
+
+For deploy and AI Search (Issues #5+), provision remote resources after `wrangler login`:
+
+```bash
+pnpm exec wrangler d1 create chat-with-anything
+pnpm exec wrangler kv namespace create RATE_LIMIT
+```
+
+Then update `database_id` and KV `id` in `wrangler.jsonc` and run `pnpm exec wrangler types`.
 
 ## Development
 
@@ -66,6 +71,7 @@ pnpm deploy   # uses wrangler.jsonc with AI + AI Search remote bindings
 | `pnpm dev` | Vite dev server |
 | `pnpm dev:worker` | Wrangler dev |
 | `pnpm build` | Build UI to `dist/` |
+| `pnpm d1:migrate:local` | Apply D1 migrations to local dev database |
 | `pnpm typecheck` | TypeScript check |
 | `pnpm deploy` | Build + deploy to Cloudflare |
 
