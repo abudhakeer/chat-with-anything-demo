@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:worker": "wrangler dev --config wrangler.local.jsonc",
+    "dev:worker": "node scripts/check-node.mjs && wrangler dev --config wrangler.local.jsonc",
     "build": "vite build",
     "build:check": "tsc --noEmit && vite build",
     "deploy": "pnpm build && wrangler deploy --config wrangler.jsonc",

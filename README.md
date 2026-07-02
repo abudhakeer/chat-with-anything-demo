@@ -44,6 +44,9 @@ Then update `database_id` and KV `id` in `wrangler.jsonc` and run `pnpm exec wra
 Run the UI and Worker in two terminals:
 
 ```bash
+nvm use          # required — Wrangler needs Node 22+ (see .nvmrc)
+pnpm build       # if you have not built the UI yet
+
 # Terminal 1 — React dev server (proxies /api → Worker)
 pnpm dev
 
