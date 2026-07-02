@@ -6,7 +6,8 @@ import {
   updateDocumentStatus,
 } from "../db/documents";
 import type { AppEnv } from "../index";
-import { indexTextDocument } from "../lib/ai-search";
+import { indexTextDocument, streamTextDocumentChat } from "../lib/ai-search";
+import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
 import {
   buildDocumentId,
   buildR2Key,
@@ -15,6 +16,8 @@ import {
   validateFileSize,
 } from "../lib/files";
 import { jsonError } from "../lib/http";
+import { sseResponse } from "../lib/sse";
+import { streamVisionDocumentChat } from "../lib/vision";
 
 type PresignBody = {
   fileName?: string;
@@ -140,6 +143,59 @@ documentsRoutes.post("/:id/complete", async (c) => {
 
   const latest = await getDocument(c.env.DB, id);
   return c.json(toDocumentResponse(latest ?? updated));
+});
+
+documentsRoutes.post("/:id/chat", async (c) => {
+  const document = await getDocument(c.env.DB, c.req.param("id"));
+  if (!document) {
+    return jsonError("Document not found.", 404);
+  }
+
+  if (document.status === "indexing") {
+    return jsonError("Document is still indexing. Try again shortly.", 409);
+  }
+
+  if (document.status === "failed") {
+    return jsonError(document.error_message ?? "Document processing failed.", 422);
+  }
+
+  if (document.status !== "ready") {
+    return jsonError("Document is not ready for chat.", 409);
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return jsonError("Invalid JSON body.");
+  }
+
+  try {
+    const { message, history } = parseChatRequestBody(body);
+
+    const stream =
+      document.pipeline === "text"
+        ? await streamTextDocumentChat({
+            env: c.env,
+            document,
+            message,
+            history,
+          })
+        : await streamVisionDocumentChat({
+            env: c.env,
+            document,
+            message,
+            history,
+          });
+
+    return sseResponse(stream);
+  } catch (error) {
+    if (error instanceof ChatRequestError) {
+      return jsonError(error.message, 400);
+    }
+    console.error("[documents.chat]", error);
+    return jsonError("Failed to generate chat response.", 500);
+  }
 });
 
 documentsRoutes.get("/:id", async (c) => {

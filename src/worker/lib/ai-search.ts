@@ -1,6 +1,8 @@
 import type { DocumentRecord } from "../db/types";
 import { updateDocumentStatus } from "../db/documents";
-import { INDEXING_POLL_INTERVAL_MS, INDEXING_POLL_TIMEOUT_MS } from "./constants";
+import { INDEXING_POLL_INTERVAL_MS, INDEXING_POLL_TIMEOUT_MS, TEXT_CHAT_MODEL } from "./constants";
+import type { ChatMessage } from "./chat";
+import { createSimulatedTokenStream, transformOpenAiStreamToAppSse } from "./sse";
 
 export function toAiSearchInstanceId(documentId: string): string {
   return documentId.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
@@ -64,5 +66,52 @@ export async function deleteAiSearchInstance(env: Env, instanceId: string): Prom
     await env.AI_SEARCH.delete(instanceId);
   } catch (error) {
     console.warn("[ai-search.delete]", instanceId, error);
+  }
+}
+
+export async function streamTextDocumentChat(args: {
+  env: Env;
+  document: DocumentRecord;
+  message: string;
+  history: ChatMessage[];
+}): Promise<ReadableStream<Uint8Array>> {
+  const instanceId =
+    args.document.ai_search_instance_id ?? toAiSearchInstanceId(args.document.id);
+  const instance = args.env.AI_SEARCH.get(instanceId);
+
+  const messages: AiSearchMessage[] = [
+    {
+      role: "system",
+      content:
+        "You answer questions about the uploaded document. Be concise and ground answers in the document content.",
+    },
+    ...args.history.map((entry) => ({
+      role: entry.role,
+      content: entry.content,
+    })),
+    { role: "user", content: args.message },
+  ];
+
+  try {
+    const source = await instance.chatCompletions({
+      messages,
+      model: TEXT_CHAT_MODEL,
+      stream: true,
+    });
+
+    return transformOpenAiStreamToAppSse(source);
+  } catch (error) {
+    console.error("[ai-search.chat]", args.document.id, error);
+
+    const fallback = await instance.chatCompletions({
+      messages,
+      model: TEXT_CHAT_MODEL,
+    });
+
+    const text =
+      fallback.choices?.[0]?.message?.content ??
+      "Sorry, I couldn't generate an answer from this document.";
+
+    return createSimulatedTokenStream(text);
   }
 }
