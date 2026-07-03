@@ -8,6 +8,14 @@ export function toAiSearchInstanceId(documentId: string): string {
   return documentId.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
 }
 
+function formatIndexingError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "Failed to index document for chat.";
+  if (message.includes("WebSocket") || message.includes("1006")) {
+    return "PDF indexing failed (AI Search connection error). Deploy with pnpm deploy and upload there.";
+  }
+  return message;
+}
+
 export async function getOrCreateAiSearchInstance(
   env: Env,
   documentId: string,
@@ -60,8 +68,7 @@ export async function indexTextDocument(env: Env, document: DocumentRecord): Pro
   } catch (error) {
     console.error("[ai-search.index]", document.id, error);
     await updateDocumentStatus(env.DB, document.id, "failed", {
-      errorMessage:
-        error instanceof Error ? error.message : "Failed to index document for chat.",
+      errorMessage: formatIndexingError(error),
     });
 
     try {
@@ -94,7 +101,7 @@ export async function streamTextDocumentChat(args: {
     {
       role: "system",
       content:
-        "You answer questions about the uploaded document. Be concise and ground answers in the document content.",
+        "You answer questions about the uploaded document. Be concise, ground answers in the document content, and format replies in Markdown (bullet lists, headings, and bold where helpful).",
     },
     ...args.history.map((entry) => ({
       role: entry.role,

@@ -17,7 +17,7 @@ function IndexingState({ pipeline }: { pipeline: DocumentResponse["pipeline"] })
   }
 
   return (
-    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+    <div className="shrink-0 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
       Indexing your document for chat… This usually takes under a minute.
     </div>
   );
@@ -25,11 +25,32 @@ function IndexingState({ pipeline }: { pipeline: DocumentResponse["pipeline"] })
 
 function ChatSkeleton() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl animate-pulse flex-col gap-4 px-4 py-6">
-      <div className="h-8 w-48 rounded-lg bg-slate-800" />
-      <div className="grid flex-1 gap-4 lg:grid-cols-2">
-        <div className="min-h-[420px] rounded-2xl bg-slate-900/60" />
-        <div className="min-h-[420px] rounded-2xl bg-slate-900/60" />
+    <div className="mx-auto flex h-dvh max-w-6xl animate-pulse flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
+      <div className="shrink-0">
+        <div className="flex h-5 items-center gap-2">
+          <div className="h-4 w-4 rounded bg-slate-800" />
+          <div className="h-4 flex-1 rounded bg-slate-800" />
+          <div className="hidden h-3 w-24 rounded bg-slate-800/70 md:block" />
+        </div>
+      </div>
+      <div className="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <div className="flex min-h-0 flex-col gap-2">
+          <div className="h-3 w-28 rounded bg-slate-800/70" />
+          <div className="min-h-0 flex-1 rounded-2xl bg-slate-900/60" />
+        </div>
+        <div className="flex min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-900/50">
+          <div className="shrink-0 border-b border-slate-800 px-4 py-3">
+            <div className="h-4 w-12 rounded bg-slate-800" />
+            <div className="mt-2 h-3 w-48 rounded bg-slate-800/70" />
+          </div>
+          <div className="min-h-0 flex-1 space-y-3 px-4 py-4">
+            <div className="h-16 w-3/4 rounded-2xl bg-slate-800/60" />
+            <div className="ml-auto h-12 w-2/3 rounded-2xl bg-sky-900/40" />
+          </div>
+          <div className="shrink-0 border-t border-slate-800 p-4">
+            <div className="h-11 rounded-xl bg-slate-800/60" />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -143,25 +164,30 @@ export function ChatPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-4 sm:px-6 sm:py-6">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link to="/" className="text-xs text-sky-400 hover:text-sky-300">
-            ← Home
-          </Link>
-          <h1 className="mt-1 truncate text-lg font-semibold text-white sm:text-xl">
-            {document.fileName}
-          </h1>
-          <p className="text-xs text-slate-500">
-            {document.pipeline === "vision" ? "Vision chat" : "Indexed text chat"} · auto-deletes
-            in 24h
-          </p>
-        </div>
+    <div className="mx-auto flex h-dvh max-w-6xl flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
+      <header className="mb-3 grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-3">
+        <Link
+          to="/"
+          className="text-sm text-sky-400 transition hover:text-sky-300"
+          aria-label="Back home"
+        >
+          ←
+        </Link>
+        <h1 className="min-w-0 truncate text-center text-sm font-semibold text-white sm:text-base">
+          {document.fileName}
+        </h1>
+        <p className="hidden truncate text-right text-xs text-slate-500 md:block">
+          {document.pipeline === "vision" ? "Vision chat" : "Indexed text chat"} · 24h
+        </p>
       </header>
 
-      {document.status === "indexing" ? <IndexingState pipeline={document.pipeline} /> : null}
+      {document.status === "indexing" ? (
+        <div className="mb-3 shrink-0">
+          <IndexingState pipeline={document.pipeline} />
+        </div>
+      ) : null}
 
-      <div className="mb-4 flex gap-2 lg:hidden">
+      <div className="mb-3 flex shrink-0 gap-2 lg:hidden">
         <button
           type="button"
           onClick={() => setMobileTab("preview")}
@@ -191,22 +217,22 @@ export function ChatPage() {
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <section
           className={[
-            "min-h-[420px] lg:min-h-[calc(100vh-8rem)]",
-            mobileTab === "preview" ? "block" : "hidden lg:block",
+            "flex min-h-0 flex-col",
+            mobileTab === "preview" ? "flex" : "hidden lg:flex",
           ].join(" ")}
         >
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="mb-2 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500">
             {previewLabel(document)}
           </div>
-          <div className="h-[calc(100%-1.5rem)] min-h-[360px]">
+          <div className="min-h-0 flex-1">
             <DocumentPreview document={document} />
           </div>
         </section>
 
         <section
           className={[
-            "min-h-[420px] lg:min-h-[calc(100vh-8rem)]",
-            mobileTab === "chat" ? "block" : "hidden lg:block",
+            "min-h-0",
+            mobileTab === "chat" ? "flex flex-col" : "hidden lg:flex lg:flex-col",
           ].join(" ")}
         >
           <ChatPanel

@@ -10,11 +10,130 @@
     sans-serif;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100%;
   background:
     radial-gradient(circle at top, rgb(14 116 144 / 0.18), transparent 45%),
     rgb(2 6 23);
   color: rgb(248 250 252);
+}
+
+.chat-markdown > :first-child {
+  margin-top: 0;
+}
+
+.chat-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown p {
+  margin: 0.65em 0;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 0.65em 0;
+  padding-left: 1.35rem;
+}
+
+.chat-markdown li {
+  margin: 0.35em 0;
+}
+
+.chat-markdown li > p {
+  margin: 0;
+}
+
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4 {
+  margin: 0.85em 0 0.45em;
+  font-weight: 600;
+  color: rgb(248 250 252);
+}
+
+.chat-markdown h1 {
+  font-size: 1.125rem;
+}
+
+.chat-markdown h2 {
+  font-size: 1rem;
+}
+
+.chat-markdown h3 {
+  font-size: 0.9375rem;
+}
+
+.chat-markdown strong {
+  font-weight: 600;
+  color: rgb(248 250 252);
+}
+
+.chat-markdown code {
+  border-radius: 0.25rem;
+  background: rgb(15 23 42 / 0.9);
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+  color: rgb(125 211 252);
+}
+
+.chat-markdown pre {
+  margin: 0.75em 0;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(51 65 85 / 0.8);
+  background: rgb(2 6 23 / 0.9);
+  padding: 0.75rem 1rem;
+}
+
+.chat-markdown pre code {
+  background: transparent;
+  padding: 0;
+  color: rgb(226 232 240);
+}
+
+.chat-markdown blockquote {
+  margin: 0.75em 0;
+  border-left: 3px solid rgb(14 165 233 / 0.5);
+  padding-left: 0.85rem;
+  color: rgb(203 213 225);
+}
+
+.chat-markdown a {
+  color: rgb(56 189 248);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-markdown hr {
+  margin: 1em 0;
+  border: none;
+  border-top: 1px solid rgb(51 65 85 / 0.8);
+}
+
+.chat-markdown table {
+  margin: 0.75em 0;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875em;
+}
+
+.chat-markdown th,
+.chat-markdown td {
+  border: 1px solid rgb(51 65 85 / 0.8);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.chat-markdown th {
+  background: rgb(15 23 42 / 0.8);
+  font-weight: 600;
 }

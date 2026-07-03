@@ -8,17 +8,21 @@ import {
 import type { AppEnv } from "../index";
 import { indexTextDocument, streamTextDocumentChat } from "../lib/ai-search";
 import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
-import { streamSampleTextChat } from "../lib/sample-chat";
-import { SAMPLE_DOCUMENTS, SAMPLE_IDS } from "../lib/samples";
+import { streamDirectTextChat } from "../lib/direct-text-chat";
 import {
   buildDocumentId,
   buildR2Key,
+  isDirectTextMimeType,
   parseUploadFile,
+  PDF_LOCAL_DEV_MESSAGE,
+  requiresAiSearchIndexing,
   UploadValidationError,
   validateFileSize,
 } from "../lib/files";
 import { jsonError } from "../lib/http";
 import { checkUploadRateLimit, getClientIp } from "../lib/rate-limit";
+import { streamSampleTextChat } from "../lib/sample-chat";
+import { SAMPLE_DOCUMENTS, SAMPLE_IDS } from "../lib/samples";
 import { sseResponse } from "../lib/sse";
 import { streamVisionDocumentChat } from "../lib/vision";
 
@@ -146,19 +150,25 @@ documentsRoutes.post("/:id/complete", async (c) => {
     return jsonError("Uploaded file not found in storage.", 400);
   }
 
-  const nextStatus = document.pipeline === "vision" ? "ready" : "indexing";
+  if (requiresAiSearchIndexing(document.mime_type) && !c.env.AI_SEARCH) {
+    const failed = await updateDocumentStatus(c.env.DB, id, "failed", {
+      errorMessage: PDF_LOCAL_DEV_MESSAGE,
+    });
+    return c.json(toDocumentResponse(failed ?? document));
+  }
+
+  const nextStatus: "ready" | "indexing" =
+    document.pipeline === "vision" || isDirectTextMimeType(document.mime_type)
+      ? "ready"
+      : "indexing";
   const updated = await updateDocumentStatus(c.env.DB, id, nextStatus);
 
   if (!updated) {
     return jsonError("Failed to update document status.", 500);
   }
 
-  if (updated.pipeline === "text" && c.env.AI_SEARCH) {
+  if (requiresAiSearchIndexing(updated.mime_type) && c.env.AI_SEARCH) {
     c.executionCtx.waitUntil(indexTextDocument(c.env, updated));
-  } else if (updated.pipeline === "text" && !c.env.AI_SEARCH) {
-    await updateDocumentStatus(c.env.DB, id, "failed", {
-      errorMessage: "AI Search is not configured in this environment.",
-    });
   }
 
   const latest = await getDocument(c.env.DB, id);
@@ -194,13 +204,21 @@ documentsRoutes.post("/:id/chat", async (c) => {
     const { message, history } = parseChatRequestBody(body);
 
     const stream =
-      SAMPLE_IDS.has(document.id) && document.pipeline === "text"
-        ? await streamSampleTextChat({
-            env: c.env,
-            document,
-            message,
-            history,
-          })
+      document.pipeline === "text" &&
+      (SAMPLE_IDS.has(document.id) || isDirectTextMimeType(document.mime_type))
+        ? await (SAMPLE_IDS.has(document.id)
+            ? streamSampleTextChat({
+                env: c.env,
+                document,
+                message,
+                history,
+              })
+            : streamDirectTextChat({
+                env: c.env,
+                document,
+                message,
+                history,
+              }))
         : document.pipeline === "text"
           ? await streamTextDocumentChat({
               env: c.env,
@@ -263,6 +281,12 @@ documentsRoutes.get("/:id/preview", async (c) => {
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
+  if (!headers.has("content-type")) {
+    headers.set("content-type", document.mime_type);
+  }
+  if (document.mime_type === "application/pdf") {
+    headers.set("content-disposition", "inline");
+  }
   headers.set("cache-control", "private, max-age=3600");
 
   return new Response(object.body, { headers });

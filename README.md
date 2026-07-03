@@ -82,7 +82,7 @@ pnpm dev:worker
 - Worker: http://localhost:8787
 - Health check: http://localhost:8787/api/v1/health
 
-`pnpm dev:worker` uses `wrangler.local.jsonc` (R2, D1, KV, assets — all local). AI bindings are omitted so you can develop upload/preview without `wrangler login`. Text indexing and chat require deploy or remote AI bindings.
+`pnpm dev:worker` uses `wrangler.local.jsonc` (R2, D1, KV, assets — all local). Workers AI uses `remote: true` so samples, TXT, and MD chat work locally after `pnpm exec wrangler login`. **PDF uploads need the deployed app** (`pnpm deploy`) — AI Search indexing does not work through `wrangler dev`.
 
 For full AI pipeline testing:
 
@@ -114,6 +114,7 @@ pnpm deploy
 | `pnpm typecheck` | TypeScript check |
 | `pnpm deploy` | Build + deploy to Cloudflare |
 | `pnpm seed:samples` | Upload demo samples to R2 and register them in production |
+| `pnpm seed:samples:local` | Same for local Wrangler bindings (reads `SEED_SECRET` from `.dev.vars`) |
 
 ## Sample documents
 
@@ -135,6 +136,18 @@ pnpm seed:samples
 
 The script uploads `samples/*` to R2, then calls `POST /api/v1/admin/seed-samples` on the
 deployed Worker. Re-run safely after sample content changes.
+
+Local dev (with `pnpm dev:worker` running):
+
+```bash
+# .dev.vars in project root:
+# SEED_SECRET=your-local-secret
+
+pnpm d1:migrate:local
+pnpm seed:samples:local
+```
+
+Then open http://localhost:5173/chat/sample_text_demo. Sample chat uses remote Workers AI (`wrangler login` required once).
 
 ## Portfolio notes
 

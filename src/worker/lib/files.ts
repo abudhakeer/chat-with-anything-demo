@@ -92,6 +92,18 @@ export function buildR2Key(docId: string, fileName: string): string {
   return `uploads/${docId}/${fileName}`;
 }
 
+/** TXT/MD are read from R2 and sent to Workers AI directly (no AI Search). */
+export function isDirectTextMimeType(mimeType: string): boolean {
+  return mimeType === "text/plain" || mimeType === "text/markdown";
+}
+
+export function requiresAiSearchIndexing(mimeType: string): boolean {
+  return mimeType === "application/pdf";
+}
+
+export const PDF_LOCAL_DEV_MESSAGE =
+  "PDF chat requires the deployed app (AI Search does not work in wrangler dev). Run pnpm deploy and upload there, or try a TXT/MD file locally.";
+
 function normalizeMimeType(contentType: string, extension: string): string {
   const normalized = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 

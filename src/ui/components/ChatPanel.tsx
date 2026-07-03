@@ -1,4 +1,7 @@
 import { useMemo, useRef, useState } from "react";
+import { ChatAvatar } from "./ChatAvatar";
+import { ChatMarkdown } from "./ChatMarkdown";
+import { TypingIndicator } from "./TypingIndicator";
 import {
   createMessageId,
   streamDocumentChat,
@@ -12,6 +15,31 @@ type ChatPanelProps = {
   disabled?: boolean;
   disabledReason?: string;
 };
+
+function SendSpinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <path
+        className="opacity-90"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+      />
+    </svg>
+  );
+}
 
 export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -102,7 +130,7 @@ export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-900/50">
-      <div className="border-b border-slate-800 px-4 py-3">
+      <div className="shrink-0 border-b border-slate-800 px-4 py-3">
         <h2 className="text-sm font-medium text-white">Chat</h2>
         <p className="text-xs text-slate-400">
           {document.pipeline === "vision"
@@ -111,7 +139,7 @@ export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps
         </p>
       </div>
 
-      <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <div ref={listRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-slate-400">
@@ -132,36 +160,58 @@ export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps
             </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={[
-                "max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                message.role === "user"
-                  ? "ml-auto bg-sky-600 text-white"
-                  : "mr-auto border border-slate-800 bg-slate-950/70 text-slate-100",
-              ].join(" ")}
-            >
-              {message.content || (isSending ? "…" : "")}
-            </div>
-          ))
+          messages.map((message, index) => {
+            const isStreamingAssistant =
+              message.role === "assistant" &&
+              isSending &&
+              index === messages.length - 1 &&
+              message.content.length === 0;
+
+            return (
+              <div
+                key={message.id}
+                className={[
+                  "flex max-w-[94%] items-end gap-2.5",
+                  message.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto",
+                ].join(" ")}
+              >
+                <ChatAvatar role={message.role} />
+                <div
+                  className={[
+                    "min-w-0 rounded-2xl px-4 py-3",
+                    message.role === "user"
+                      ? "bg-sky-600 text-white"
+                      : "border border-slate-800 bg-slate-950/70 text-slate-100",
+                  ].join(" ")}
+                >
+                  {message.role === "user" ? (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                  ) : isStreamingAssistant ? (
+                    <TypingIndicator />
+                  ) : (
+                    <ChatMarkdown content={message.content} />
+                  )}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
       {disabledReason ? (
-        <div className="border-t border-slate-800 px-4 py-3 text-sm text-amber-200">
+        <div className="shrink-0 border-t border-slate-800 px-4 py-3 text-sm text-amber-200">
           {disabledReason}
         </div>
       ) : null}
 
       {error ? (
-        <div className="border-t border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="shrink-0 border-t border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
         </div>
       ) : null}
 
       <form
-        className="border-t border-slate-800 p-4"
+        className="shrink-0 border-t border-slate-800 p-4"
         onSubmit={(event) => {
           event.preventDefault();
           void sendMessage(input);
@@ -178,9 +228,16 @@ export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps
           <button
             type="submit"
             disabled={disabled || isSending || input.trim().length === 0}
-            className="rounded-xl bg-sky-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-w-[4.5rem] items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSending ? "Sending…" : "Send"}
+            {isSending ? (
+              <>
+                <SendSpinner />
+                <span className="sr-only">Sending</span>
+              </>
+            ) : (
+              "Send"
+            )}
           </button>
         </div>
       </form>

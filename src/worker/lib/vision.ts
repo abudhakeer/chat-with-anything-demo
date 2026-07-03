@@ -77,7 +77,7 @@ export async function streamVisionDocumentChat(args: {
     {
       role: "system",
       content:
-        "You describe and answer questions about the uploaded image. Be concise and specific.",
+        "You describe and answer questions about the uploaded image. Be concise, specific, and format replies in Markdown (bullet lists, headings, and bold where helpful).",
     },
     ...args.history.map((entry) => ({
       role: entry.role,

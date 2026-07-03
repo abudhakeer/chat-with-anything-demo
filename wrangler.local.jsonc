@@ -24,6 +24,10 @@
       "migrations_dir": "migrations"
     }
   ],
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  },
   "kv_namespaces": [
     {
       "binding": "RATE_LIMIT",

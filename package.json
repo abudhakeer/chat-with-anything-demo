@@ -12,13 +12,16 @@
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types",
     "d1:migrate:local": "wrangler d1 migrations apply chat-with-anything --local --config wrangler.local.jsonc",
-    "seed:samples": "node scripts/seed-samples.mjs"
+    "seed:samples": "node scripts/seed-samples.mjs",
+    "seed:samples:local": "node scripts/seed-samples.mjs --local"
   },
   "dependencies": {
     "hono": "^4.7.10",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.2"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.6.2",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250702.0",
@@ -32,7 +35,11 @@
     "wrangler": "^4.22.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "workerd", "sharp"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd",
+      "sharp"
+    ]
   },
   "engines": {
     "node": ">=22.0.0"
