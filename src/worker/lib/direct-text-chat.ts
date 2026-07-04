@@ -1,6 +1,7 @@
 import type { DocumentRecord } from "../db/types";
 import { TEXT_CHAT_MODEL } from "./constants";
 import type { ChatMessage } from "./chat";
+import { extractedTextKey } from "./pdf-extract";
 import { createSimulatedTokenStream } from "./sse";
 
 export async function streamDirectTextChat(args: {
@@ -16,9 +17,16 @@ export async function streamDirectTextChat(args: {
     );
   }
 
-  const object = await args.env.BUCKET.get(args.document.r2_key);
+  // PDFs are extracted to plain text at upload time (see pdf-extract.ts);
+  // TXT/MD files are already plain text and can be read as-is.
+  const textKey =
+    args.document.mime_type === "application/pdf"
+      ? extractedTextKey(args.document)
+      : args.document.r2_key;
+
+  const object = await args.env.BUCKET.get(textKey);
   if (!object) {
-    throw new Error("Document file not found in storage.");
+    throw new Error("Document text not found in storage.");
   }
 
   const documentText = await object.text();

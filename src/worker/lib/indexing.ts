@@ -1,12 +1,12 @@
 import { updateDocumentStatus } from "../db/documents";
 import type { DocumentRecord } from "../db/types";
 
-// Backend gives up on indexing after INDEXING_TIMEOUT_MS and writes the
-// final status to D1. INDEXING_STALE_MS must stay comfortably above that so
-// the client never marks a document "failed" before the backend has had a
-// chance to record the real outcome.
-export const INDEXING_TIMEOUT_MS = 80_000;
-export const INDEXING_STALE_MS = 100_000;
+// Backend gives up on PDF text extraction after INDEXING_TIMEOUT_MS and
+// writes the final status to D1. INDEXING_STALE_MS must stay comfortably
+// above that so the client never marks a document "failed" before the
+// backend has had a chance to record the real outcome.
+export const INDEXING_TIMEOUT_MS = 60_000;
+export const INDEXING_STALE_MS = 75_000;
 
 export function parseDocumentTimestamp(value: string): number {
   const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;

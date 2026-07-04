@@ -5,7 +5,7 @@ import {
   uploadDocument,
 } from "../lib/upload";
 
-type UploadState = "idle" | "uploading" | "error";
+type UploadState = "idle" | "uploading" | "processing" | "error";
 
 export function UploadDropzone() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +26,12 @@ export function UploadDropzone() {
       try {
         const result = await uploadDocument({
           file,
-          onProgress: setProgress,
+          onProgress: (pct) => {
+            setProgress(pct);
+            if (pct >= 100) {
+              setState("processing");
+            }
+          },
         });
         navigate(`/chat/${result.id}`);
       } catch (uploadError) {
@@ -52,7 +57,7 @@ export function UploadDropzone() {
     void handleFile(event.dataTransfer.files[0]);
   };
 
-  const isUploading = state === "uploading";
+  const isUploading = state === "uploading" || state === "processing";
 
   return (
     <div className="w-full max-w-xl space-y-4">
@@ -90,14 +95,21 @@ export function UploadDropzone() {
 
         {isUploading ? (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-slate-200">Uploading…</p>
+            <p className="text-sm font-medium text-slate-200">
+              {state === "processing" ? "Processing document…" : "Uploading…"}
+            </p>
             <div className="mx-auto h-2 w-full max-w-sm overflow-hidden rounded-full bg-slate-800">
               <div
-                className="h-full rounded-full bg-sky-500 transition-all"
+                className={[
+                  "h-full rounded-full bg-sky-500 transition-all",
+                  state === "processing" ? "animate-pulse" : "",
+                ].join(" ")}
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-slate-400">{progress}%</p>
+            <p className="text-xs text-slate-400">
+              {state === "processing" ? "Usually just a few seconds for PDFs." : `${progress}%`}
+            </p>
           </div>
         ) : (
           <>

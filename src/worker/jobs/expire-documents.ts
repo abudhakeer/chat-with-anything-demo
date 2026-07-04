@@ -3,7 +3,7 @@ import {
   findExpiredDocuments,
   updateDocumentStatus,
 } from "../db/documents";
-import { deleteAiSearchInstance } from "../lib/ai-search";
+import { extractedTextKey } from "../lib/pdf-extract";
 import { SAMPLE_IDS } from "../lib/samples";
 
 export async function expireDocuments(env: Env): Promise<number> {
@@ -19,8 +19,8 @@ export async function expireDocuments(env: Env): Promise<number> {
     try {
       await env.BUCKET.delete(document.r2_key);
 
-      if (document.pipeline === "text" && document.ai_search_instance_id) {
-        await deleteAiSearchInstance(env, document.ai_search_instance_id);
+      if (document.mime_type === "application/pdf") {
+        await env.BUCKET.delete(extractedTextKey(document));
       }
 
       await deleteDocument(env.DB, document.id);

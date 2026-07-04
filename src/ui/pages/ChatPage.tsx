@@ -53,8 +53,8 @@ function IndexingState({
     return null;
   }
 
-  const progress = Math.min(95, Math.round((elapsedSeconds / 60) * 100));
-  const isSlow = elapsedSeconds >= 45;
+  const progress = Math.min(95, Math.round((elapsedSeconds / 20) * 100));
+  const isSlow = elapsedSeconds >= 20;
 
   return (
     <div className="shrink-0 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
@@ -64,9 +64,9 @@ function IndexingState({
           aria-hidden="true"
         />
         <div>
-          <p className="font-medium">Indexing your document for chat…</p>
+          <p className="font-medium">Preparing your document for chat…</p>
           <p className="mt-0.5 text-xs text-amber-100/80">
-            Elapsed: {formatElapsed(elapsedSeconds)} · usually under a minute or two
+            Elapsed: {formatElapsed(elapsedSeconds)} · usually just a few seconds
           </p>
         </div>
       </div>
@@ -85,7 +85,7 @@ function IndexingState({
       </div>
       {isSlow ? (
         <p className="mt-3 text-xs leading-relaxed text-amber-100/90">
-          Still working… larger PDFs can take a little longer to index. Hang tight.
+          Still working… larger PDFs can take a little longer to process. Hang tight.
         </p>
       ) : null}
     </div>
@@ -93,27 +93,12 @@ function IndexingState({
 }
 
 function FailedState({ error }: { error: string | null }) {
-  // Only true local-dev-specific failures (missing AI Search binding, or the
-  // WebSocket disconnect that happens over the wrangler dev remote binding)
-  // should point people at `pnpm deploy`. A generic timeout can happen in
-  // production too and shouldn't be blamed on local dev.
-  const isLocalDevHint =
-    error?.includes("deploy") || error?.includes("WebSocket") || error?.includes("1006");
-
   return (
     <div className="shrink-0 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
       <p className="font-medium">Couldn&apos;t prepare this document for chat</p>
       <p className="mt-1 text-xs leading-relaxed text-rose-100/90">
-        {error ?? "Indexing failed. Try uploading again."}
+        {error ?? "Processing failed. Try uploading again."}
       </p>
-      {isLocalDevHint ? (
-        <p className="mt-2 text-xs leading-relaxed text-rose-100/80">
-          PDF chat needs Cloudflare AI Search, which is unreliable in{" "}
-          <code className="rounded bg-rose-950/40 px-1">pnpm dev:worker</code>. Deploy with{" "}
-          <code className="rounded bg-rose-950/40 px-1">pnpm deploy</code>, or upload a TXT/MD
-          file for instant local chat.
-        </p>
-      ) : null}
       <Link
         to="/"
         className="mt-3 inline-block text-xs font-medium text-rose-200 underline-offset-2 hover:text-white hover:underline"
@@ -240,7 +225,7 @@ export function ChatPage() {
       return document.error ?? "This document failed to process.";
     }
     if (document.status === "indexing") {
-      return "Chat unlocks after indexing completes.";
+      return "Chat unlocks once this document finishes processing.";
     }
     if (document.status !== "ready") {
       return "Document is not ready for chat yet.";

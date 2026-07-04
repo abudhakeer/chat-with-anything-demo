@@ -6,7 +6,6 @@ import {
   updateDocumentStatus,
 } from "../db/documents";
 import type { AppEnv } from "../index";
-import { indexTextDocument, streamTextDocumentChat } from "../lib/ai-search";
 import { resolveStaleIndexing } from "../lib/indexing";
 import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
 import { streamDirectTextChat } from "../lib/direct-text-chat";
@@ -15,11 +14,11 @@ import {
   buildR2Key,
   isDirectTextMimeType,
   parseUploadFile,
-  PDF_LOCAL_DEV_MESSAGE,
-  requiresAiSearchIndexing,
+  requiresPdfExtraction,
   UploadValidationError,
   validateFileSize,
 } from "../lib/files";
+import { extractPdfDocument } from "../lib/pdf-extract";
 import { jsonError } from "../lib/http";
 import { checkUploadRateLimit, getClientIp } from "../lib/rate-limit";
 import { streamSampleTextChat } from "../lib/sample-chat";
@@ -151,13 +150,6 @@ documentsRoutes.post("/:id/complete", async (c) => {
     return jsonError("Uploaded file not found in storage.", 400);
   }
 
-  if (requiresAiSearchIndexing(document.mime_type) && !c.env.AI_SEARCH) {
-    const failed = await updateDocumentStatus(c.env.DB, id, "failed", {
-      errorMessage: PDF_LOCAL_DEV_MESSAGE,
-    });
-    return c.json(toDocumentResponse(failed ?? document));
-  }
-
   const nextStatus: "ready" | "indexing" =
     document.pipeline === "vision" || isDirectTextMimeType(document.mime_type)
       ? "ready"
@@ -168,8 +160,12 @@ documentsRoutes.post("/:id/complete", async (c) => {
     return jsonError("Failed to update document status.", 500);
   }
 
-  if (requiresAiSearchIndexing(updated.mime_type) && c.env.AI_SEARCH) {
-    c.executionCtx.waitUntil(indexTextDocument(c.env, updated));
+  if (requiresPdfExtraction(updated.mime_type)) {
+    // Run extraction inline instead of via ctx.waitUntil(), which is
+    // hard-capped at 30 seconds after the response is sent (Cloudflare
+    // platform limit). Awaiting it here keeps the work inside the request's
+    // own execution lifetime so the response reflects the real, final status.
+    await extractPdfDocument(c.env, updated);
   }
 
   const latest = await getDocument(c.env.DB, id);
@@ -205,8 +201,7 @@ documentsRoutes.post("/:id/chat", async (c) => {
     const { message, history } = parseChatRequestBody(body);
 
     const stream =
-      document.pipeline === "text" &&
-      (SAMPLE_IDS.has(document.id) || isDirectTextMimeType(document.mime_type))
+      document.pipeline === "text"
         ? await (SAMPLE_IDS.has(document.id)
             ? streamSampleTextChat({
                 env: c.env,
@@ -220,14 +215,7 @@ documentsRoutes.post("/:id/chat", async (c) => {
                 message,
                 history,
               }))
-        : document.pipeline === "text"
-          ? await streamTextDocumentChat({
-              env: c.env,
-              document,
-              message,
-              history,
-            })
-          : await streamVisionDocumentChat({
+        : await streamVisionDocumentChat({
               env: c.env,
               document,
               message,
