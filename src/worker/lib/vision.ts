@@ -1,6 +1,7 @@
 import type { DocumentRecord } from "../db/types";
 import { VISION_CHAT_MODEL } from "./constants";
 import type { ChatMessage } from "./chat";
+import { buildVisionSystemPrompt } from "./prompts";
 import { createSimulatedTokenStream, transformWorkersAiStreamToAppSse } from "./sse";
 
 const MAX_VISION_IMAGE_BYTES = 512 * 1024;
@@ -100,8 +101,7 @@ export async function streamVisionDocumentChat(args: {
   const messages: Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Messages["messages"] = [
     {
       role: "system",
-      content:
-        "You describe and answer questions about the uploaded image. Be concise, specific, and format replies in Markdown (bullet lists, headings, and bold where helpful).",
+      content: buildVisionSystemPrompt(),
     },
     ...args.history.map((entry) => ({
       role: entry.role,

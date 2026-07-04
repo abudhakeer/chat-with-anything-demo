@@ -2,6 +2,7 @@ import type { DocumentRecord } from "../db/types";
 import { TEXT_CHAT_MODEL } from "./constants";
 import type { ChatMessage } from "./chat";
 import { extractedTextKey } from "./pdf-extract";
+import { buildTextDocumentSystemPrompt } from "./prompts";
 import { createSimulatedTokenStream, transformWorkersAiStreamToAppSse } from "./sse";
 
 export async function streamDirectTextChat(args: {
@@ -9,7 +10,7 @@ export async function streamDirectTextChat(args: {
   document: DocumentRecord;
   message: string;
   history: ChatMessage[];
-  systemIntro?: string;
+  isSample?: boolean;
 }): Promise<ReadableStream<Uint8Array>> {
   if (!args.env.AI) {
     throw new Error(
@@ -34,16 +35,11 @@ export async function streamDirectTextChat(args: {
   const messages: Ai_Cf_Meta_Llama_3_3_70B_Instruct_Fp8_Fast_Messages["messages"] = [
     {
       role: "system",
-      content: [
-        args.systemIntro ??
-          "You answer questions about the uploaded document below.",
-        "Ground answers in the document only and keep replies concise.",
-        "Format every reply in Markdown (bullet lists, headings, and bold where helpful).",
-        "",
-        "--- Document ---",
+      content: buildTextDocumentSystemPrompt({
         documentText,
-        "--- End document ---",
-      ].join("\n"),
+        fileName: args.document.file_name,
+        isSample: args.isSample,
+      }),
     },
     ...args.history.map((entry) => ({
       role: entry.role,

@@ -10,6 +10,6 @@ export async function streamSampleTextChat(args: {
 }): Promise<ReadableStream<Uint8Array>> {
   return streamDirectTextChat({
     ...args,
-    systemIntro: "You answer questions about the sample document below.",
+    isSample: true,
   });
 }
