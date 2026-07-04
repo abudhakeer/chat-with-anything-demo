@@ -2,7 +2,7 @@ import type { DocumentRecord } from "../db/types";
 import { TEXT_CHAT_MODEL } from "./constants";
 import type { ChatMessage } from "./chat";
 import { extractedTextKey } from "./pdf-extract";
-import { createSimulatedTokenStream } from "./sse";
+import { createSimulatedTokenStream, transformWorkersAiStreamToAppSse } from "./sse";
 
 export async function streamDirectTextChat(args: {
   env: Env;
@@ -52,14 +52,26 @@ export async function streamDirectTextChat(args: {
     { role: "user", content: args.message },
   ];
 
-  const result = await args.env.AI.run(TEXT_CHAT_MODEL, {
-    messages,
-    max_tokens: 1024,
-  });
+  try {
+    const stream = (await args.env.AI.run(TEXT_CHAT_MODEL, {
+      messages,
+      max_tokens: 1024,
+      stream: true,
+    })) as ReadableStream;
 
-  const text =
-    (result as Ai_Cf_Meta_Llama_3_3_70B_Instruct_Fp8_Fast_Output).response ??
-    "Sorry, I couldn't generate an answer from this document.";
+    return transformWorkersAiStreamToAppSse(stream);
+  } catch (error) {
+    console.error("[direct-text-chat] streaming failed, falling back", error);
 
-  return createSimulatedTokenStream(text);
+    const result = await args.env.AI.run(TEXT_CHAT_MODEL, {
+      messages,
+      max_tokens: 1024,
+    });
+
+    const text =
+      (result as Ai_Cf_Meta_Llama_3_3_70B_Instruct_Fp8_Fast_Output).response ??
+      "Sorry, I couldn't generate an answer from this document.";
+
+    return createSimulatedTokenStream(text);
+  }
 }

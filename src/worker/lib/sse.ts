@@ -27,6 +27,61 @@ export function createSimulatedTokenStream(text: string): ReadableStream<Uint8Ar
   });
 }
 
+// Workers AI's own streaming format emits `data: {"response": "..."}` chunks
+// (not OpenAI's `choices[].delta.content` shape used by transformOpenAiStreamToAppSse).
+export function transformWorkersAiStreamToAppSse(
+  source: ReadableStream,
+): ReadableStream<Uint8Array> {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = "";
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = (source as ReadableStream<Uint8Array>).getReader();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+
+            const data = trimmed.slice(5).trim();
+            if (data === "[DONE]") {
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data) as { response?: string };
+              if (parsed.response) {
+                controller.enqueue(
+                  encoder.encode(formatSseEvent({ type: "token", content: parsed.response })),
+                );
+              }
+            } catch {
+              // Ignore malformed SSE chunks.
+            }
+          }
+        }
+
+        controller.enqueue(encoder.encode(formatSseEvent({ type: "done" })));
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        reader.releaseLock();
+      }
+    },
+  });
+}
+
 export function transformOpenAiStreamToAppSse(
   source: ReadableStream<Uint8Array>,
 ): ReadableStream<Uint8Array> {

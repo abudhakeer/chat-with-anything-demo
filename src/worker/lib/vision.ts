@@ -1,7 +1,7 @@
 import type { DocumentRecord } from "../db/types";
 import { VISION_CHAT_MODEL } from "./constants";
 import type { ChatMessage } from "./chat";
-import { createSimulatedTokenStream } from "./sse";
+import { createSimulatedTokenStream, transformWorkersAiStreamToAppSse } from "./sse";
 
 const MAX_VISION_IMAGE_BYTES = 512 * 1024;
 
@@ -41,6 +41,30 @@ async function runVisionModel(
       messages,
       max_tokens: 1024,
     })) as Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Output;
+  }
+}
+
+async function runVisionModelStream(
+  env: Env,
+  messages: Ai_Cf_Meta_Llama_3_2_11B_Vision_Instruct_Messages["messages"],
+): Promise<ReadableStream> {
+  try {
+    return (await env.AI.run(VISION_CHAT_MODEL, {
+      messages,
+      max_tokens: 1024,
+      stream: true,
+    })) as ReadableStream;
+  } catch (error) {
+    if (!requiresVisionLicenseAcceptance(error)) {
+      throw error;
+    }
+
+    await ensureVisionModelLicensed(env);
+    return (await env.AI.run(VISION_CHAT_MODEL, {
+      messages,
+      max_tokens: 1024,
+      stream: true,
+    })) as ReadableStream;
   }
 }
 
@@ -92,8 +116,13 @@ export async function streamVisionDocumentChat(args: {
     },
   ];
 
-  const result = await runVisionModel(args.env, messages);
-  const text = result.response ?? "Sorry, I couldn't analyze this image.";
-
-  return createSimulatedTokenStream(text);
+  try {
+    const stream = await runVisionModelStream(args.env, messages);
+    return transformWorkersAiStreamToAppSse(stream);
+  } catch (error) {
+    console.error("[vision] streaming failed, falling back", error);
+    const result = await runVisionModel(args.env, messages);
+    const text = result.response ?? "Sorry, I couldn't analyze this image.";
+    return createSimulatedTokenStream(text);
+  }
 }
