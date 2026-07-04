@@ -11,14 +11,116 @@ import { previewLabel } from "../lib/preview";
 
 type MobileTab = "preview" | "chat";
 
-function IndexingState({ pipeline }: { pipeline: DocumentResponse["pipeline"] }) {
+function parseDocumentTimestamp(value: string): number {
+  const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
+  return Date.parse(normalized);
+}
+
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}m ${remainder}s`;
+}
+
+function IndexingState({
+  pipeline,
+  startedAt,
+}: {
+  pipeline: DocumentResponse["pipeline"];
+  startedAt: string;
+}) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const startedAtMs = parseDocumentTimestamp(startedAt);
+    if (!Number.isFinite(startedAtMs)) {
+      return;
+    }
+
+    const tick = () => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [startedAt]);
+
   if (pipeline === "vision") {
     return null;
   }
 
+  const progress = Math.min(95, Math.round((elapsedSeconds / 60) * 100));
+  const isSlow = elapsedSeconds >= 45;
+
   return (
     <div className="shrink-0 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-      Indexing your document for chat… This usually takes under a minute.
+      <div className="flex items-center gap-3">
+        <span
+          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-amber-200/30 border-t-amber-100"
+          aria-hidden="true"
+        />
+        <div>
+          <p className="font-medium">Indexing your document for chat…</p>
+          <p className="mt-0.5 text-xs text-amber-100/80">
+            Elapsed: {formatElapsed(elapsedSeconds)} · usually under a minute
+          </p>
+        </div>
+      </div>
+      <div
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-amber-950/50"
+        role="progressbar"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Indexing progress"
+      >
+        <div
+          className="h-full rounded-full bg-amber-400 transition-[width] duration-500 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      {isSlow ? (
+        <p className="mt-3 text-xs leading-relaxed text-amber-100/90">
+          Still working… PDF indexing over local dev can be slow or fail. For reliable PDF chat,
+          run <code className="rounded bg-amber-950/40 px-1">pnpm deploy</code> and upload on the
+          deployed URL.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function FailedState({ error }: { error: string | null }) {
+  const isLocalDevHint =
+    error?.includes("deploy") ||
+    error?.includes("WebSocket") ||
+    error?.includes("timed out") ||
+    error?.includes("local dev");
+
+  return (
+    <div className="shrink-0 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+      <p className="font-medium">Couldn&apos;t prepare this document for chat</p>
+      <p className="mt-1 text-xs leading-relaxed text-rose-100/90">
+        {error ?? "Indexing failed. Try uploading again."}
+      </p>
+      {isLocalDevHint ? (
+        <p className="mt-2 text-xs leading-relaxed text-rose-100/80">
+          PDF chat needs Cloudflare AI Search, which is unreliable in{" "}
+          <code className="rounded bg-rose-950/40 px-1">pnpm dev:worker</code>. Deploy with{" "}
+          <code className="rounded bg-rose-950/40 px-1">pnpm deploy</code>, or upload a TXT/MD
+          file for instant local chat.
+        </p>
+      ) : null}
+      <Link
+        to="/"
+        className="mt-3 inline-block text-xs font-medium text-rose-200 underline-offset-2 hover:text-white hover:underline"
+      >
+        Upload another file
+      </Link>
     </div>
   );
 }
@@ -183,7 +285,13 @@ export function ChatPage() {
 
       {document.status === "indexing" ? (
         <div className="mb-3 shrink-0">
-          <IndexingState pipeline={document.pipeline} />
+          <IndexingState pipeline={document.pipeline} startedAt={document.updatedAt} />
+        </div>
+      ) : null}
+
+      {document.status === "failed" ? (
+        <div className="mb-3 shrink-0">
+          <FailedState error={document.error} />
         </div>
       ) : null}
 

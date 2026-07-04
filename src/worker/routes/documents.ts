@@ -7,6 +7,7 @@ import {
 } from "../db/documents";
 import type { AppEnv } from "../index";
 import { indexTextDocument, streamTextDocumentChat } from "../lib/ai-search";
+import { resolveStaleIndexing } from "../lib/indexing";
 import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
 import { streamDirectTextChat } from "../lib/direct-text-chat";
 import {
@@ -255,10 +256,13 @@ documentsRoutes.get("/:id", async (c) => {
 });
 
 documentsRoutes.get("/:id/status", async (c) => {
-  const document = await getDocument(c.env.DB, c.req.param("id"));
+  const id = c.req.param("id");
+  let document = await getDocument(c.env.DB, id);
   if (!document) {
     return jsonError("Document not found.", 404);
   }
+
+  document = await resolveStaleIndexing(c.env.DB, document, Date.now());
 
   return c.json({
     id: document.id,
