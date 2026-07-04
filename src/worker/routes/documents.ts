@@ -5,9 +5,15 @@ import {
   toDocumentResponse,
   updateDocumentStatus,
 } from "../db/documents";
+import {
+  buildMessageId,
+  insertMessage,
+  listMessagesByDocument,
+  toMessageResponse,
+} from "../db/messages";
 import type { AppEnv } from "../index";
 import { resolveStaleIndexing } from "../lib/indexing";
-import { ChatRequestError, parseChatRequestBody } from "../lib/chat";
+import { ChatRequestError, parseChatRequestBody, truncateChatHistory } from "../lib/chat";
 import { streamDirectTextChat } from "../lib/direct-text-chat";
 import {
   buildDocumentId,
@@ -20,6 +26,7 @@ import {
 } from "../lib/files";
 import { extractPdfDocument } from "../lib/pdf-extract";
 import { jsonError } from "../lib/http";
+import { persistChatStream } from "../lib/persist-chat-stream";
 import { checkUploadRateLimit, getClientIp } from "../lib/rate-limit";
 import { streamSampleTextChat } from "../lib/sample-chat";
 import { SAMPLE_DOCUMENTS, SAMPLE_IDS } from "../lib/samples";
@@ -198,9 +205,24 @@ documentsRoutes.post("/:id/chat", async (c) => {
   }
 
   try {
-    const { message, history } = parseChatRequestBody(body);
+    const { message } = parseChatRequestBody(body);
 
-    const stream =
+    const storedMessages = await listMessagesByDocument(c.env.DB, document.id);
+    const history = truncateChatHistory(
+      storedMessages.map((entry) => ({
+        role: entry.role,
+        content: entry.content,
+      })),
+    );
+
+    await insertMessage(c.env.DB, {
+      id: buildMessageId(),
+      documentId: document.id,
+      role: "user",
+      content: message,
+    });
+
+    const baseStream =
       document.pipeline === "text"
         ? await (SAMPLE_IDS.has(document.id)
             ? streamSampleTextChat({
@@ -216,11 +238,20 @@ documentsRoutes.post("/:id/chat", async (c) => {
                 history,
               }))
         : await streamVisionDocumentChat({
-              env: c.env,
-              document,
-              message,
-              history,
-            });
+            env: c.env,
+            document,
+            message,
+            history,
+          });
+
+    const stream = persistChatStream(baseStream, async (assistantContent) => {
+      await insertMessage(c.env.DB, {
+        id: buildMessageId(),
+        documentId: document.id,
+        role: "assistant",
+        content: assistantContent,
+      });
+    });
 
     return sseResponse(stream);
   } catch (error) {
@@ -233,6 +264,18 @@ documentsRoutes.post("/:id/chat", async (c) => {
       500,
     );
   }
+});
+
+documentsRoutes.get("/:id/messages", async (c) => {
+  const document = await getDocument(c.env.DB, c.req.param("id"));
+  if (!document) {
+    return jsonError("Document not found.", 404);
+  }
+
+  const messages = await listMessagesByDocument(c.env.DB, document.id);
+  return c.json({
+    messages: messages.map(toMessageResponse),
+  });
 });
 
 documentsRoutes.get("/:id", async (c) => {

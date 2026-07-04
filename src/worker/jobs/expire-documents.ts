@@ -3,6 +3,7 @@ import {
   findExpiredDocuments,
   updateDocumentStatus,
 } from "../db/documents";
+import { deleteMessagesByDocument } from "../db/messages";
 import { extractedTextKey } from "../lib/pdf-extract";
 import { SAMPLE_IDS } from "../lib/samples";
 
@@ -23,6 +24,7 @@ export async function expireDocuments(env: Env): Promise<number> {
         await env.BUCKET.delete(extractedTextKey(document));
       }
 
+      await deleteMessagesByDocument(env.DB, document.id);
       await deleteDocument(env.DB, document.id);
       deletedCount += 1;
     } catch (error) {

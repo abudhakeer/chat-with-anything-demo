@@ -7,8 +7,6 @@ import {
   fetchDocumentStatus,
   type DocumentResponse,
 } from "../lib/api";
-import { previewLabel } from "../lib/preview";
-
 type MobileTab = "preview" | "chat";
 
 function parseDocumentTimestamp(value: string): number {
@@ -313,9 +311,6 @@ export function ChatPage() {
             mobileTab === "preview" ? "flex" : "hidden lg:flex",
           ].join(" ")}
         >
-          <div className="mb-2 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500">
-            {previewLabel(document)}
-          </div>
           <div className="min-h-0 flex-1">
             <DocumentPreview document={document} />
           </div>

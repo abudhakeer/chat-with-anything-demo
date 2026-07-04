@@ -67,10 +67,27 @@ export async function fetchSampleDocuments(): Promise<SampleDocument[]> {
   return payload.samples ?? [];
 }
 
+export async function fetchDocumentMessages(docId: string): Promise<ChatMessage[]> {
+  const res = await fetch(`/api/v1/documents/${docId}/messages`);
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? `Failed to load chat history (${res.status})`);
+  }
+
+  const payload = (await res.json()) as {
+    messages?: Array<{ id: string; role: ChatRole; content: string }>;
+  };
+
+  return (payload.messages ?? []).map((message) => ({
+    id: message.id,
+    role: message.role,
+    content: message.content,
+  }));
+}
+
 export async function streamDocumentChat(args: {
   docId: string;
   message: string;
-  history: Array<{ role: ChatRole; content: string }>;
   onToken: (token: string) => void;
   signal?: AbortSignal;
 }): Promise<void> {
@@ -79,7 +96,6 @@ export async function streamDocumentChat(args: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       message: args.message,
-      history: args.history,
     }),
     signal: args.signal,
   });

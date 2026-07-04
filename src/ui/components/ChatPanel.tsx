@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatAvatar } from "./ChatAvatar";
 import { ChatMarkdown } from "./ChatMarkdown";
 import { TypingIndicator } from "./TypingIndicator";
 import {
   createMessageId,
+  fetchDocumentMessages,
   streamDocumentChat,
   SUGGESTED_PROMPTS,
   type ChatMessage,
@@ -41,13 +42,58 @@ function SendSpinner() {
   );
 }
 
+function ChatHistorySkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse" aria-hidden="true">
+      <div className="mr-auto h-16 w-3/4 rounded-2xl bg-slate-800/80" />
+      <div className="ml-auto h-12 w-2/3 rounded-2xl bg-slate-800/60" />
+      <div className="mr-auto h-20 w-4/5 rounded-2xl bg-slate-800/80" />
+    </div>
+  );
+}
+
 export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      setIsLoadingHistory(true);
+      setHistoryError(null);
+
+      try {
+        const loaded = await fetchDocumentMessages(document.id);
+        if (!cancelled) {
+          setMessages(loaded);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setMessages([]);
+          setHistoryError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Failed to load chat history.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingHistory(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [document.id]);
 
   const prompts = useMemo(
     () =>
@@ -92,15 +138,9 @@ export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps
     ]);
 
     try {
-      const history = [...messages, userMessage].map((message) => ({
-        role: message.role,
-        content: message.content,
-      }));
-
       await streamDocumentChat({
         docId: document.id,
         message: trimmed,
-        history,
         signal: abortRef.current.signal,
         onToken: (token) => {
           setMessages((current) =>
@@ -140,7 +180,11 @@ export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps
       </div>
 
       <div ref={listRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <ChatHistorySkeleton />
+        ) : historyError ? (
+          <p className="text-sm text-amber-200">{historyError}</p>
+        ) : messages.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-slate-400">
               Ask a question about {document.fileName}.
@@ -221,13 +265,13 @@ export function ChatPanel({ document, disabled, disabledReason }: ChatPanelProps
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            disabled={disabled || isSending}
+            disabled={disabled || isSending || isLoadingHistory}
             placeholder={disabled ? "Chat unavailable" : "Ask about this document…"}
             className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none ring-sky-500/30 placeholder:text-slate-500 focus:ring-2 disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={disabled || isSending || input.trim().length === 0}
+            disabled={disabled || isSending || isLoadingHistory || input.trim().length === 0}
             className="inline-flex min-w-[4.5rem] items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSending ? (
