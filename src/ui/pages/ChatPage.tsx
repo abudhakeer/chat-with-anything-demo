@@ -66,7 +66,7 @@ function IndexingState({
         <div>
           <p className="font-medium">Indexing your document for chat…</p>
           <p className="mt-0.5 text-xs text-amber-100/80">
-            Elapsed: {formatElapsed(elapsedSeconds)} · usually under a minute
+            Elapsed: {formatElapsed(elapsedSeconds)} · usually under a minute or two
           </p>
         </div>
       </div>
@@ -85,9 +85,7 @@ function IndexingState({
       </div>
       {isSlow ? (
         <p className="mt-3 text-xs leading-relaxed text-amber-100/90">
-          Still working… PDF indexing over local dev can be slow or fail. For reliable PDF chat,
-          run <code className="rounded bg-amber-950/40 px-1">pnpm deploy</code> and upload on the
-          deployed URL.
+          Still working… larger PDFs can take a little longer to index. Hang tight.
         </p>
       ) : null}
     </div>
@@ -95,11 +93,12 @@ function IndexingState({
 }
 
 function FailedState({ error }: { error: string | null }) {
+  // Only true local-dev-specific failures (missing AI Search binding, or the
+  // WebSocket disconnect that happens over the wrangler dev remote binding)
+  // should point people at `pnpm deploy`. A generic timeout can happen in
+  // production too and shouldn't be blamed on local dev.
   const isLocalDevHint =
-    error?.includes("deploy") ||
-    error?.includes("WebSocket") ||
-    error?.includes("timed out") ||
-    error?.includes("local dev");
+    error?.includes("deploy") || error?.includes("WebSocket") || error?.includes("1006");
 
   return (
     <div className="shrink-0 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">

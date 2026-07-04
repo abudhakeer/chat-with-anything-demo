@@ -2,13 +2,7 @@ import type { DocumentRecord } from "../db/types";
 import { updateDocumentStatus } from "../db/documents";
 import { INDEXING_POLL_INTERVAL_MS, INDEXING_POLL_TIMEOUT_MS, TEXT_CHAT_MODEL } from "./constants";
 import type { ChatMessage } from "./chat";
-import {
-  INDEXING_MAX_ATTEMPTS,
-  INDEXING_TIMEOUT_MS,
-  isRetryableIndexingError,
-  sleep,
-  withTimeout,
-} from "./indexing";
+import { INDEXING_TIMEOUT_MS, withTimeout } from "./indexing";
 import { createSimulatedTokenStream, transformOpenAiStreamToAppSse } from "./sse";
 
 export function toAiSearchInstanceId(documentId: string): string {
@@ -66,37 +60,24 @@ async function runTextDocumentIndexing(
 
 export async function indexTextDocument(env: Env, document: DocumentRecord): Promise<void> {
   const instanceId = toAiSearchInstanceId(document.id);
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= INDEXING_MAX_ATTEMPTS; attempt++) {
-    try {
-      await withTimeout(
-        runTextDocumentIndexing(env, document, instanceId),
-        INDEXING_TIMEOUT_MS,
-        "Indexing timed out after 90 seconds.",
-      );
-      return;
-    } catch (error) {
-      lastError = error;
-      const canRetry = attempt < INDEXING_MAX_ATTEMPTS && isRetryableIndexingError(error);
-      if (canRetry) {
-        console.warn("[ai-search.index] retrying", document.id, { attempt, error });
-        await sleep(2_000 * attempt);
-        continue;
-      }
-      break;
-    }
-  }
-
-  console.error("[ai-search.index]", document.id, lastError);
-  await updateDocumentStatus(env.DB, document.id, "failed", {
-    errorMessage: formatIndexingError(lastError),
-  });
 
   try {
-    await env.AI_SEARCH.delete(instanceId);
-  } catch (deleteError) {
-    console.warn("[ai-search.delete]", instanceId, deleteError);
+    await withTimeout(
+      runTextDocumentIndexing(env, document, instanceId),
+      INDEXING_TIMEOUT_MS,
+      `Indexing timed out after ${INDEXING_TIMEOUT_MS / 1000} seconds.`,
+    );
+  } catch (error) {
+    console.error("[ai-search.index]", document.id, error);
+    await updateDocumentStatus(env.DB, document.id, "failed", {
+      errorMessage: formatIndexingError(error),
+    });
+
+    try {
+      await env.AI_SEARCH.delete(instanceId);
+    } catch (deleteError) {
+      console.warn("[ai-search.delete]", instanceId, deleteError);
+    }
   }
 }
 

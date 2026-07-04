@@ -1,9 +1,12 @@
 import { updateDocumentStatus } from "../db/documents";
 import type { DocumentRecord } from "../db/types";
 
-export const INDEXING_STALE_MS = 90_000;
-export const INDEXING_TIMEOUT_MS = 90_000;
-export const INDEXING_MAX_ATTEMPTS = 2;
+// Backend gives up on indexing after INDEXING_TIMEOUT_MS and writes the
+// final status to D1. INDEXING_STALE_MS must stay comfortably above that so
+// the client never marks a document "failed" before the backend has had a
+// chance to record the real outcome.
+export const INDEXING_TIMEOUT_MS = 80_000;
+export const INDEXING_STALE_MS = 100_000;
 
 export function parseDocumentTimestamp(value: string): number {
   const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
@@ -19,17 +22,7 @@ export function isIndexingStale(updatedAt: string, nowMs: number): boolean {
 }
 
 export function staleIndexingErrorMessage(): string {
-  return "Indexing timed out. PDF chat is unreliable in local dev — run pnpm deploy and upload on the deployed URL.";
-}
-
-export function isRetryableIndexingError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return (
-    message.includes("WebSocket") ||
-    message.includes("1006") ||
-    message.includes("timed out") ||
-    message.includes("connection")
-  );
+  return "Indexing is taking longer than expected and may have failed. Please try again, or try a smaller PDF.";
 }
 
 export async function resolveStaleIndexing(
@@ -46,12 +39,6 @@ export async function resolveStaleIndexing(
   });
 
   return failed ?? document;
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }
 
 export function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
