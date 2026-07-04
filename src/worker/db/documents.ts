@@ -6,7 +6,7 @@ import type {
 } from "./types";
 
 const DOCUMENT_COLUMNS =
-  "id, file_name, mime_type, size_bytes, r2_key, pipeline, ai_search_instance_id, status, error_message, created_at, updated_at, expires_at";
+  "id, file_name, mime_type, size_bytes, r2_key, pipeline, ai_search_instance_id, status, error_message, created_at, updated_at, expires_at, session_id";
 
 function mapRow(row: Record<string, unknown>): DocumentRecord {
   return {
@@ -28,6 +28,10 @@ function mapRow(row: Record<string, unknown>): DocumentRecord {
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
     expires_at: String(row.expires_at),
+    session_id:
+      row.session_id === null || row.session_id === undefined
+        ? null
+        : String(row.session_id),
   };
 }
 
@@ -46,8 +50,8 @@ export async function createDocument(
   await db
     .prepare(
       `INSERT INTO documents (
-        id, file_name, mime_type, size_bytes, r2_key, pipeline, status, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, file_name, mime_type, size_bytes, r2_key, pipeline, status, expires_at, session_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       input.id,
@@ -58,6 +62,7 @@ export async function createDocument(
       input.pipeline,
       status,
       expiresAt,
+      input.sessionId ?? null,
     )
     .run();
 
@@ -124,6 +129,26 @@ export async function findExpiredDocuments(
        ORDER BY expires_at ASC`,
     )
     .bind(nowIso)
+    .all<Record<string, unknown>>();
+
+  return (result.results ?? []).map(mapRow);
+}
+
+export async function listDocumentsBySession(
+  db: D1Database,
+  sessionId: string,
+  nowIso: string,
+): Promise<DocumentRecord[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${DOCUMENT_COLUMNS}
+       FROM documents
+       WHERE session_id = ?
+         AND expires_at > ?
+       ORDER BY created_at DESC
+       LIMIT 20`,
+    )
+    .bind(sessionId, nowIso)
     .all<Record<string, unknown>>();
 
   return (result.results ?? []).map(mapRow);

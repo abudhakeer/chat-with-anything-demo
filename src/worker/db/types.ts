@@ -15,6 +15,7 @@ export interface DocumentRecord {
   created_at: string;
   updated_at: string;
   expires_at: string;
+  session_id: string | null;
 }
 
 export interface CreateDocumentInput {
@@ -25,4 +26,5 @@ export interface CreateDocumentInput {
   r2Key: string;
   pipeline: DocumentPipeline;
   status?: DocumentStatus;
+  sessionId?: string | null;
 }

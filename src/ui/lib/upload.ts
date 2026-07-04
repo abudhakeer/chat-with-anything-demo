@@ -21,6 +21,7 @@ export async function presignUpload(args: {
   const res = await fetch("/api/v1/documents/presign", {
     method: "POST",
     headers: { "content-type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(args),
   });
 
@@ -66,6 +67,7 @@ export async function uploadDocumentFile(args: {
 export async function completeUpload(docId: string): Promise<CompleteResponse> {
   const res = await fetch(`/api/v1/documents/${docId}/complete`, {
     method: "POST",
+    credentials: "include",
   });
 
   if (!res.ok) {

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import {
   createDocument,
   getDocument,
+  listDocumentsBySession,
   toDocumentResponse,
   updateDocumentStatus,
 } from "../db/documents";
@@ -52,6 +53,27 @@ documentsRoutes.get("/samples", (c) => {
   });
 });
 
+documentsRoutes.get("/recent", async (c) => {
+  const sessionId = c.get("sessionId");
+  const documents = await listDocumentsBySession(
+    c.env.DB,
+    sessionId,
+    new Date().toISOString(),
+  );
+
+  return c.json({
+    documents: documents.map((document) => ({
+      id: document.id,
+      fileName: document.file_name,
+      status: document.status,
+      pipeline: document.pipeline,
+      createdAt: document.created_at,
+      expiresAt: document.expires_at,
+      chatPath: `/chat/${document.id}`,
+    })),
+  });
+});
+
 documentsRoutes.post("/presign", async (c) => {
   const ip = getClientIp(c.req.raw.headers);
   const rateLimit = await checkUploadRateLimit(c.env.RATE_LIMIT, ip);
@@ -84,6 +106,7 @@ documentsRoutes.post("/presign", async (c) => {
       r2Key,
       pipeline: parsed.pipeline,
       status: "uploading",
+      sessionId: c.get("sessionId"),
     });
 
     const origin = new URL(c.req.url).origin;

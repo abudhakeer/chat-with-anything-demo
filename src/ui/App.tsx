@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { RecentDocs } from "./components/RecentDocs";
 import { SampleDocs } from "./components/SampleDocs";
 import { UploadDropzone } from "./components/UploadDropzone";
 import { ChatPage } from "./pages/ChatPage";
@@ -20,6 +21,7 @@ function HomePage() {
       </div>
 
       <UploadDropzone />
+      <RecentDocs />
       <SampleDocs />
     </main>
   );

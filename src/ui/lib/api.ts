@@ -30,6 +30,19 @@ export type SampleDocument = {
   chatPath: string;
 };
 
+export type RecentDocument = {
+  id: string;
+  fileName: string;
+  status: DocumentStatus;
+  pipeline: DocumentPipeline;
+  createdAt: string;
+  expiresAt: string;
+  chatPath: string;
+};
+
+const apiFetch = (input: RequestInfo | URL, init?: RequestInit) =>
+  fetch(input, { ...init, credentials: "include" });
+
 export type ChatRole = "user" | "assistant";
 
 export type ChatMessage = {
@@ -39,7 +52,7 @@ export type ChatMessage = {
 };
 
 export async function fetchDocument(docId: string): Promise<DocumentResponse> {
-  const res = await fetch(`/api/v1/documents/${docId}`);
+  const res = await apiFetch(`/api/v1/documents/${docId}`);
   if (!res.ok) {
     const payload = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error ?? `Failed to load document (${res.status})`);
@@ -50,7 +63,7 @@ export async function fetchDocument(docId: string): Promise<DocumentResponse> {
 export async function fetchDocumentStatus(
   docId: string,
 ): Promise<DocumentStatusResponse> {
-  const res = await fetch(`/api/v1/documents/${docId}/status`);
+  const res = await apiFetch(`/api/v1/documents/${docId}/status`);
   if (!res.ok) {
     const payload = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error ?? `Failed to load status (${res.status})`);
@@ -59,7 +72,7 @@ export async function fetchDocumentStatus(
 }
 
 export async function fetchSampleDocuments(): Promise<SampleDocument[]> {
-  const res = await fetch("/api/v1/documents/samples");
+  const res = await apiFetch("/api/v1/documents/samples");
   if (!res.ok) {
     return [];
   }
@@ -67,8 +80,17 @@ export async function fetchSampleDocuments(): Promise<SampleDocument[]> {
   return payload.samples ?? [];
 }
 
+export async function fetchRecentDocuments(): Promise<RecentDocument[]> {
+  const res = await apiFetch("/api/v1/documents/recent");
+  if (!res.ok) {
+    return [];
+  }
+  const payload = (await res.json()) as { documents?: RecentDocument[] };
+  return payload.documents ?? [];
+}
+
 export async function fetchDocumentMessages(docId: string): Promise<ChatMessage[]> {
-  const res = await fetch(`/api/v1/documents/${docId}/messages`);
+  const res = await apiFetch(`/api/v1/documents/${docId}/messages`);
   if (!res.ok) {
     const payload = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error ?? `Failed to load chat history (${res.status})`);
@@ -91,7 +113,7 @@ export async function streamDocumentChat(args: {
   onToken: (token: string) => void;
   signal?: AbortSignal;
 }): Promise<void> {
-  const res = await fetch(`/api/v1/documents/${args.docId}/chat`, {
+  const res = await apiFetch(`/api/v1/documents/${args.docId}/chat`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
